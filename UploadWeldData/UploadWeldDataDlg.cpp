@@ -429,6 +429,8 @@ void CUploadWeldDataDlg::uploadThread()
 					LOG4CPLUS_INFO(Logger::getInstance(LOG4CPLUS_TEXT("mes")),
 						LOG4CPLUS_STRING_TO_TSTRING(res));
 				}
+				LOG4CPLUS_INFO(Logger::getInstance(LOG4CPLUS_TEXT("mes")),
+					LOG4CPLUS_STRING_TO_TSTRING("上传成功，返回信息：" + resJson.dump()));
 			}
 			else
 			{
@@ -1604,6 +1606,13 @@ void CUploadWeldDataDlg::OnBnClickedButtonPause()
 
 	while (workOneThreadFlag || plcThreadFlag || uploadThreadFlag || ADOThreadFlag)
 		Sleep(10);
+
+	if (omronComm.get_PortOpen())
+		omronComm.put_PortOpen(FALSE);
+	if (honeyWellOneComm.get_PortOpen())
+		honeyWellOneComm.put_PortOpen(FALSE);
+	if (weldComm.get_PortOpen())
+		weldComm.put_PortOpen(FALSE);
 
 	moEdit.EnableWindow(TRUE);
 	btStart.EnableWindow(TRUE);

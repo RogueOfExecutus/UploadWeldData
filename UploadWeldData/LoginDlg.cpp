@@ -64,5 +64,28 @@ void CLoginDlg::OnBnClickedOk()
 	}
 	empNoEdit.GetWindowText(empNo);
 	areaEdit.GetWindowText(area);
+
+	WritePrivateProfileString(_T("user"), _T("empNo"), empNo, parameter);
+	WritePrivateProfileString(_T("user"), _T("area"), area, parameter);
+
 	CDialogEx::OnOK();
+}
+
+
+BOOL CLoginDlg::OnInitDialog()
+{
+	CDialogEx::OnInitDialog();
+
+	// TODO:  在此添加额外的初始化
+	CFileFind finder;   //查找是否存在ini文件，若不存在，则跳过   
+	if (finder.FindFile(parameter))
+	{
+		GetPrivateProfileString(_T("user"), _T("empNo"), _T(""), empNo.GetBuffer(10), 10, parameter);
+		GetPrivateProfileString(_T("user"), _T("area"), _T(""), area.GetBuffer(10), 10, parameter);
+		empNoEdit.SetWindowText(empNo);
+		areaEdit.SetWindowText(area);
+	}
+
+	return TRUE;  // return TRUE unless you set the focus to a control
+				  // 异常: OCX 属性页应返回 FALSE
 }

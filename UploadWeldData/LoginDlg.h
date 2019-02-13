@@ -31,4 +31,7 @@ private:
 	CEdit empNoEdit;
 	CEdit passwordEdit;
 	CEdit areaEdit;
+	const CString parameter = _T(".\\Parameter.ini");
+public:
+	virtual BOOL OnInitDialog();
 };
