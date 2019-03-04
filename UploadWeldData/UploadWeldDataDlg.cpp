@@ -230,36 +230,38 @@ void CUploadWeldDataDlg::workOneThread()
 			recDone[i] = false;
 			isDelay[i] = false;
 		}
-		//发送
-		unique_lock <mutex> lockLaser(mtxLaser);
-		weldComm.put_Output(POWER_TRIG);
-		lockLaser.unlock();
-		std::thread th2(&CUploadWeldDataDlg::delayThread, this, 1);
-		th2.detach();
-
-		//Sleep(sendInterval);
-		lockLaser.lock();
-		cvLaser.wait_for(lockLaser, chrono::milliseconds(sendInterval));
-		weldComm.put_Output(PW_TRIG);
-		lockLaser.unlock();
-		std::thread th3(&CUploadWeldDataDlg::delayThread, this, 2);
-		th3.detach();
-
-		//Sleep(sendInterval);
-		lockLaser.lock();
-		cvLaser.wait_for(lockLaser, chrono::milliseconds(sendInterval));
-		weldComm.put_Output(FREQ_TRIG);
-		lockLaser.unlock();
-		std::thread th4(&CUploadWeldDataDlg::delayThread, this, 3);
-		th4.detach();
-
+		//PLC数据获取
 		unique_lock <mutex> lockPlc(mtxPlc);
-		if (trigDelay > 10)
-			Sleep(trigDelay);
+		/*if (trigDelay > 10)
+			Sleep(trigDelay);*/
 		omronComm.put_Output(COleVariant(getPLCData));
 		lockPlc.unlock();
 		std::thread th1(&CUploadWeldDataDlg::delayThread, this, 0);
 		th1.detach();
+		//激光机数据获取
+		unique_lock <mutex> lockLaser(mtxLaser);
+		weldComm.put_Output(POWER_TRIG);
+		std::thread th2(&CUploadWeldDataDlg::delayThread, this, 1);
+		th2.detach();
+		cvLaser.wait_for(lockLaser, chrono::milliseconds(sendInterval));
+		lockLaser.unlock();
+
+		//Sleep(sendInterval);
+		lockLaser.lock();
+		weldComm.put_Output(PW_TRIG);
+		std::thread th3(&CUploadWeldDataDlg::delayThread, this, 2);
+		th3.detach();
+		cvLaser.wait_for(lockLaser, chrono::milliseconds(sendInterval));
+		lockLaser.unlock();
+
+		//Sleep(sendInterval);
+		lockLaser.lock();
+		weldComm.put_Output(FREQ_TRIG);
+		std::thread th4(&CUploadWeldDataDlg::delayThread, this, 3);
+		th4.detach();
+		lockLaser.unlock();
+
+		
 		//等待结果
 		unique_lock <mutex> lock2(mtx2);
 		while (runFlag && !(recDone[0] && recDone[1] && recDone[2] && recDone[3]))
@@ -267,6 +269,10 @@ void CUploadWeldDataDlg::workOneThread()
 		if (!runFlag)
 			break;
 		lock2.unlock();
+		//复位
+		unique_lock <mutex> lockPlc(mtxPlc);
+		omronComm.put_Output(COleVariant(resetTrigger));
+		lockPlc.unlock();
 		writeListCtrl();
 		//处理结果
 		if (isDelay[0] || isDelay[1] || isDelay[2] || isDelay[3])
@@ -392,9 +398,16 @@ void CUploadWeldDataDlg::plcThread()
 	{
 		unique_lock <mutex> lock(mtxPlc);
 		if (!triggerFlag)
+		{
 			omronComm.put_Output(COleVariant(checkTrigger));
-		lock.unlock();
-		Sleep(trigInterval);
+			cvPlc.wait_for(lock, chrono::milliseconds(trigInterval));
+			lock.unlock();
+		}
+		else
+		{
+			lock.unlock();
+			Sleep(trigInterval);
+		}
 	}
 	plcThreadFlag = false;
 }
@@ -652,7 +665,7 @@ void CUploadWeldDataDlg::OnCommOmron()
 				//触发
 				if (!triggerFlag)
 				{
-					omronComm.put_Output(COleVariant(resetTrigger));
+					//omronComm.put_Output(COleVariant(resetTrigger));
 					//WriteLog("comm", "plc trigger ON", INFO_LOG_LEVEL);
 					LOG4CPLUS_INFO(Logger::getInstance(LOG4CPLUS_TEXT("comm")),
 						LOG4CPLUS_TEXT("plc trigger ON"));
@@ -745,6 +758,7 @@ void CUploadWeldDataDlg::OnCommOmron()
 		LOG4CPLUS_INFO(Logger::getInstance(LOG4CPLUS_TEXT("comm")),
 			LOG4CPLUS_STRING_TO_TSTRING("plc接收信息：" + string((char*)rxdata) + "数据长度：" + to_string(len)));
 		delete[] rxdata;
+		cvPlc.notify_all();
 	}
 	lockPlc.unlock();
 }
@@ -1022,8 +1036,8 @@ void CUploadWeldDataDlg::OnCommWeld()
 		lock.unlock();
 
 		delete[] rxdata;
+		cvLaser.notify_all();
 	}
-	cvLaser.notify_all();
 	lockLaser.unlock();
 }
 

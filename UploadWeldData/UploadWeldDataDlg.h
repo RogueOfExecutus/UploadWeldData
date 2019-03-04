@@ -131,7 +131,7 @@ private:
 	std::mutex mtx2;
 	std::condition_variable cv2;
 	std::mutex mtxPlc;
-	//std::condition_variable cvPlc;
+	std::condition_variable cvPlc;
 	std::mutex mtxLaser;
 	std::condition_variable cvLaser;
 	std::mutex mtxUpload;
